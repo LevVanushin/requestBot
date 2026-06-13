@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 
 const {data, error} = await supabase.from('botData').select('botToken')
 
-const token = data.botToken;
+const token = data[0].botToken;
 let bot = new Telegraf(token);
 
 bot.start((ctx) => ctx.reply('Welcome'))
