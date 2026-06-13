@@ -1,9 +1,8 @@
 import { Telegraf } from "telegraf";
 import { supabase } from "./supabase.js";
 
-const {data, error} = await supabase.from('botData').select('*')
 
-const token = data[0].botToken;
+const token = process.env.BOT_TOKEN;
 let bot = new Telegraf(token);
 
 bot.start((ctx) => ctx.reply('Welcome'))
