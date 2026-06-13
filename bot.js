@@ -1,7 +1,7 @@
 import { Telegraf } from "telegraf";
 import { supabase } from "./supabase.js";
 
-const {data, error} = await supabase.from('botData').select('botToken')
+const {data, error} = await supabase.from('botData').select('*')
 
 const token = data[0].botToken;
 let bot = new Telegraf(token);
