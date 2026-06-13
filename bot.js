@@ -17,13 +17,13 @@ bot.start((ctx) => ctx.reply('👋 Добро пожаловать! Исполь
 bot.command('check', async (ctx) => {
     try {
         // Показываем, что бот обрабатывает запрос
-        await ctx.reply('🔍 Получаю список заявок...');
+        ctx.reply('🔍 Получаю список заявок...');
         
         // Получаем данные из базы данных
         const { data, error } = await supabase
             .from('requests')
             .select('*')
-            .order('created_at', { ascending: false });
+            ;
         
         if (error) {
             console.error('Ошибка Supabase:', error);
