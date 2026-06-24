@@ -1,131 +1,149 @@
 import { Telegraf } from "telegraf";
 import { supabase } from "./supabase.js";
 
-const token = process.env.BOT_TOKEN;
+const token = "8879285203:AAENrODazo76y6bSsuClBtaKnZvO1o_nnPA";
 
 if (!token) {
+    
     console.error('❌ BOT_TOKEN не найден в переменных окружения');
     process.exit(1);
 }
 
 const bot = new Telegraf(token);
-
+let lastCount = 0
 // Команда /start
-bot.start((ctx) => ctx.reply('👋 Добро пожаловать! Используйте /check для просмотра заявок'));
+bot.start(async (ctx) => {
+    let { data, error } = await supabase.from('requests').select('*');
+    lastCount = data.length;
+    console.log(lastCount)
+    ctx.reply('👋 Добро пожаловать! Используйте /check для просмотра заявок');
+}
+);
 
 // Команда /check - вывод всех заявок
 bot.command('check', async (ctx) => {
-    try {
-        // Показываем, что бот обрабатывает запрос
-        ctx.reply('🔍 Получаю список заявок...');
+    if (ctx.message.text.split(' ').length > 1){
+        const args = ctx.message.text.split(' ');
+        const limit = args[1] ? Number(args[1]) : null;
         
-        // Получаем данные из базы данных
-        const { data, error } = await supabase
-            .from('requests')
-            .select('*')
-            ;
-        
-        if (error) {
-            console.error('Ошибка Supabase:', error);
-            await ctx.reply('❌ Ошибка при получении данных из базы данных');
-            return;
-        }
-        
-        // Проверяем, есть ли заявки
-        if (!data || data.length === 0) {
-            await ctx.reply('📭 Нет ни одной заявки в базе данных');
-            return;
-        }
-        
-        // Формируем сообщение со всеми заявками
-        let message = `📋 *Список заявок (${data.length} шт.):*\n\n`;
-        
-        data.forEach((request, index) => {
-            // Парсим данные из поля data (JSON строка)
-            let formData = {};
-            try {
-                formData = JSON.parse(request.data);
-            } catch (e) {
-                formData = { error: "Не удалось распарсить данные" };
+        try {
+            let query = supabase
+                .from('requests')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (limit && !isNaN(limit)) {
+                query = query.limit(limit);
             }
             
-            // Форматируем дату
-            const date = new Date(request.created_at);
-            const formattedDate = date.toLocaleString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+            const { data, error } = await query;
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                await ctx.reply('📭 Нет заявок');
+                return;
+            }
+            
+            let message = `📋 *Последние ${args[1]} заявок:*\n\n`;
+            
+            data.forEach((request, index) => {
+                let formData = JSON.parse(request.data || '{}');
+                message += `*${index + 1}. ${formData.name || 'Без имени'}*\n`;
+                message += `📧 *Email:* ${formData.email || 'Не указан'}\n`;
+                message += `💼 *Услуга:* ${formData.service || 'Не указана'}\n`;
+                message += `💬 *Сообщение:* ${formData.message || 'Нет сообщения'}\n`;
+                message += `━━━━━━━━━━━━━━━\n`;
+
+                
             });
             
-            // Добавляем заявку в сообщение
-            message += `*${index + 1}. Заявка #${request.id}*\n`;
-            message += `📅 *Дата:* ${formattedDate}\n`;
-            message += `👤 *Имя:* ${formData.name || 'Не указано'}\n`;
-            message += `📧 *Email:* ${formData.email || 'Не указан'}\n`;
-            message += `💼 *Услуга:* ${formData.service || 'Не указана'}\n`;
-            message += `💬 *Сообщение:* ${formData.message || 'Нет сообщения'}\n`;
-            message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-        });
-        
-        // Отправляем сообщение (если оно слишком длинное, Telegram может не отправить)
-        if (message.length > 4096) {
-            // Разбиваем на части
-            const chunks = message.match(/[\s\S]{1,4000}/g) || [];
-            for (const chunk of chunks) {
-                await ctx.reply(chunk, { parse_mode: 'Markdown' });
-            }
-        } else {
             await ctx.reply(message, { parse_mode: 'Markdown' });
+            return
+            
+        } catch (error) {
+            await ctx.reply('❌ Ошибка получения данных');
+        }}
+    else {
         }
-        
-    } catch (error) {
-        console.error('Ошибка:', error);
-        await ctx.reply('❌ Произошла ошибка при обработке запроса');
+        try {
+            // Показываем, что бот обрабатывает запрос
+            ctx.reply('🔍 Получаю список заявок...');
+            
+            // Получаем данные из базы данных
+            const { data, error } = await supabase
+                .from('requests')
+                .select('*');
+            
+            if (error) {
+                console.error('Ошибка Supabase:', error);
+                await ctx.reply('❌ Ошибка при получении данных из базы данных');
+                return;
+            }
+            
+            // Проверяем, есть ли заявки
+            if (!data || data.length === 0) {
+                await ctx.reply('📭 Нет ни одной заявки в базе данных');
+                return;
+            }
+            
+            // Формируем сообщение со всеми заявками
+            let message = `📋 *Список заявок (${data.length} шт.):*\n\n`;
+            
+            data.forEach((request, index) => {
+                console.log(request)
+                // Парсим данные из поля data (JSON строка)
+                let formData = {};
+                try {
+                    formData = JSON.parse(request.data);
+                    console.log("Form data  ", formData)
+                } catch (e) {
+                    formData = { error: "Не удалось распарсить данные" };
+                }
+                
+                // Форматируем дату
+                const date = new Date(request.created_at);
+                const formattedDate = date.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                console.log('formatted data  ', formattedDate);
+                
+                // Добавляем заявку в сообщение
+                message += `*${index + 1}.*\n`;
+                message += `📅 *Дата:* ${formattedDate}\n`;
+                message += `👤 *Имя:* ${formData.name || 'Не указано'}\n`;
+                message += `📧 *Email:* ${formData.email || 'Не указан'}\n`;
+                message += `💼 *Услуга:* ${formData.service || 'Не указана'}\n`;
+                message += `💬 *Сообщение:* ${formData.message || 'Нет сообщения'}\n`;
+                message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            });
+            
+            // Отправляем сообщение (если оно слишком длинное, Telegram может не отправить)
+            if (message.length > 4096) {
+                // Разбиваем на части
+                const chunks = message.match(/[\s\S]{1,4000}/g) || [];
+                for (const chunk of chunks) {
+                    await ctx.reply(chunk, { parse_mode: 'Markdown' });
+                }
+            } else {
+                console.log('Отправка ', message)
+                await ctx.reply(message, { parse_mode: 'Markdown' });
+                console.log('ОТПРАВЛЕНО')
+            }
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+            await ctx.reply('❌ Произошла ошибка при обработке запроса');
+        }
     }
-});
+);
 
 // Команда /check N - показать последние N заявок
-bot.command('check', async (ctx) => {
-    const args = ctx.message.text.split(' ');
-    const limit = args[1] ? parseInt(args[1]) : null;
-    
-    try {
-        let query = supabase
-            .from('requests')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (limit && !isNaN(limit)) {
-            query = query.limit(limit);
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-            await ctx.reply('📭 Нет заявок');
-            return;
-        }
-        
-        let message = `📋 *Последние ${data.length} заявок:*\n\n`;
-        
-        data.forEach((request, index) => {
-            let formData = JSON.parse(request.data || '{}');
-            message += `*${index + 1}. ${formData.name || 'Без имени'}*\n`;
-            message += `📧 ${formData.email || 'Нет email'}\n`;
-            message += `💼 ${formData.service || 'Нет услуги'}\n`;
-            message += `━━━━━━━━━━━━━━━\n`;
-        });
-        
-        await ctx.reply(message, { parse_mode: 'Markdown' });
-        
-    } catch (error) {
-        await ctx.reply('❌ Ошибка получения данных');
-    }
-});
+
 
 // Команда /details ID - показать детальную информацию о заявке
 bot.command('details', async (ctx) => {
@@ -209,6 +227,20 @@ bot.command('help', (ctx) => {
     ctx.reply(helpMessage, { parse_mode: 'Markdown' });
 });
 
+async function getDbUpdates(){
+    let {data, error} = await supabase.from('requests').select('*');
+    if (data.length > lastCount) {
+        lastCount+= data.length - lastCount
+        bot.telegram.sendMessage(1972427242, "Получена новая заявка! Напиши /check, чтобы посмотреть")
+    }
+}
+
+(async () => {
+    let inter = setInterval(() => {
+        getDbUpdates()
+    }, 3000)
+})()
+// ваа
 // Запуск бота
 bot.launch()
     .then(() => {
@@ -216,6 +248,7 @@ bot.launch()
         console.log('Доступные команды: /check, /details, /count, /help');
     })
     .catch((err) => {
+
         console.error('❌ Ошибка при запуске бота:', err);
         process.exit(1);
     });
