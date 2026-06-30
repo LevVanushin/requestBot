@@ -238,7 +238,7 @@ async function getDbUpdates(){
 (async () => {
     let inter = setInterval(() => {
         getDbUpdates()
-    }, 3000)
+    }, 180000)
 })()
 // ваа
 // Запуск бота
